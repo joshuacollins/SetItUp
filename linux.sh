@@ -5,7 +5,7 @@
 ####    Built to make it easy to start fresh Kali VMs regularly.
 ####    Author: Joshua Collins
 
-base_packages="build-essential curl htop nmap sshpass"
+base_packages="build-essential curl htop nmap sshpass chromium"
 dev_packages="ctags git gcc g++ make perl python3 python3-dev python3-pip shellcheck vim-runtime xterm"
 
 # Used for python2 and python3
@@ -23,7 +23,7 @@ unsupervised_initial_tasks()
 {
     sudo apt-get update
     # Resolves some issues
-    sudo apt-get --y dist-upgrade
+    sudo apt-get -y dist-upgrade
 }
 
 # Ask a question, with a default (enter) answer of "Yes!"
@@ -54,7 +54,7 @@ install_selected_packages()
 
     ask_question "Install development packages (Python, C/C++, Perl, Vim, Make, Ctags)?"
     if [ "$?" -eq 0 ]; then
-        sudo apt-get -y install ${base_packages}
+        sudo apt-get -y install ${dev_packages}
         sudo apt-get -y install ${perl_libraries}
 
         ask_question "Install common Python2 libraries (using pip)?"
@@ -87,8 +87,12 @@ gnome_config()
     # Just hope gnome is installed, keep going if not
     gsettings set org.gnome.desktop.session idle-delay 0 || true
 
+    #TODO: Disable transparency in the gnome-terminal
 }
 
+# Enable most commonly used features for a VM in the virtualbox package.
+# Some of these commands will fail, but will have successfully enabled the feature which will work
+# on reboot.
 virtualbox_config()
 {
     # Because shipping a package with all the important features turned off is what they did!
@@ -112,7 +116,7 @@ virtualbox_packages()
     if [ "$?" -eq 0 ]; then
         # Full integration packages for kali/ubuntu
 
-        sudo apt-get --y install ${vbox_packages}
+        sudo apt-get -y install ${vbox_packages}
 
         virtualbox_config
     fi
@@ -131,9 +135,13 @@ secure_ssh()
 {
     ask_question "Is your SSH public key available?"
     if [ "$?" -eq 0 ]; then
+        # TODO: No it won't, not without a reboot.
         echo "In theory, copy paste should now work in your VM, if enabled in the host settings"
         read -p $'Paste your SSH public key here:\n' -r trusted_key
 
+        if [ ! -d "~/.ssh/" ]; then
+            mkdir ~/.ssh
+        fi
         echo "${trusted_key}" >> ~/.ssh/authorized_keys
     fi
 
@@ -147,7 +155,7 @@ secure_ssh()
         < /etc/ssh/sshd_config > /etc/ssh/sshd_config.tmp
 
     # Append the settings we want to set
-    echo "# Added by $0\nPermitRootLogin no\nPasswordAuthentication no\n" >> /etc/sshd_config.tmp
+    echo "# Added by $0\nPermitRootLogin no\nPasswordAuthentication no\n" >> /etc/ssh/sshd_config.tmp
 
     mv /etc/ssh/sshd_config.tmp /etc/ssh/sshd_config
 }
@@ -165,7 +173,7 @@ bash_profile()
 vim_setup()
 {
     # Skip if it's not installed.
-    dpkg -s vim-runtime
+    dpkg -s vim-runtime > /dev/null
     if [ "$?" -ne 0 ]; then
         return
     fi
