@@ -5,7 +5,7 @@
 ####    Built to make it easy to start fresh Kali VMs regularly.
 ####    Author: Joshua Collins
 
-base_packages="build-essential curl htop nmap sshpass chromium"
+base_packages="build-essential chromium curl firefox-esr ftp htop nmap slurm sshpass"
 dev_packages="ctags git gcc g++ make perl python3 python3-dev python3-pip shellcheck vim-runtime xterm"
 
 # Used for python2 and python3
@@ -16,6 +16,25 @@ tcl_packages="expect"
 novelty_packages="sysvbanner cowsay"
 
 vbox_packages="dkms virtualbox-guest-x11 virtualbox-guest-dkms virtualbox-guest-utils"
+
+#What type of system is it?
+# kali | debian
+THIS_SYSTEM=""
+
+# Sets THIS_SYSTEM variable. Currently detects kali and debian.
+detect_system()
+{
+    uname_output="$(uname -ars)"
+    echo "${uname_output}" | grep "Linux kali-2018"
+    if [ "$?" -eq 0 ]; then
+        THIS_SYSTEM="kali"
+    fi
+
+    echo "${uname_output}" | grep "Linux debian"
+    if [ "$?" -eq 0 ]; then
+        THIS_SYSTEM="debian"
+    fi
+}
 
 # Update apt repository state, pull the system forward to the latest (fixes lots of fun bugs in
 # virtualisation software!)
@@ -67,6 +86,12 @@ install_selected_packages()
             pip3 install ${pip_packages}
         fi
 
+        ask_question "Install node.js?"
+        if [ "$?" -eq 0 ]; then
+            curl -sL https://deb.nodesource.com/setup_10.x | sudo -E bash -
+            sudo apt-get install -y nodejs
+        fi
+
         ask_question "Install TCL/Expect?"
         if [ "$?" -eq 0 ]; then
             sudo apt-get -y install ${tcl_packages}
@@ -107,6 +132,10 @@ virtualbox_config()
     # Like, seriously!?! You thought I wanted my clock to stay stuck on installation day?
     VBoxService --enable-timesync
     VBoxService --enable-automount
+
+    # Ensure that it will be enabled on startup
+    systemctl start virtualbox-guest-utils
+    systemctl enable virtualbox-guest-utils
 }
 
 virtualbox_packages()
@@ -122,12 +151,14 @@ virtualbox_packages()
     fi
 }
 
-new_passwd()
+new_root_passwd()
 {
-    ask_question "Is your password still root/toor?"
-    if [ "$?" -eq 0 ]; then
-        echo "Shameful!"
-        passwd
+    if [ "${THIS_SYSTEM}" == "kali" ]; then
+        ask_question "Is your password still root/toor?"
+        if [ "$?" -eq 0 ]; then
+            echo "Shameful!"
+            passwd
+        fi
     fi
 }
 
@@ -155,7 +186,7 @@ secure_ssh()
         < /etc/ssh/sshd_config > /etc/ssh/sshd_config.tmp
 
     # Append the settings we want to set
-    echo "# Added by $0\nPermitRootLogin no\nPasswordAuthentication no\n" >> /etc/ssh/sshd_config.tmp
+    echo -e "# Added by $0\nPermitRootLogin no\nPasswordAuthentication no\n" >> /etc/ssh/sshd_config.tmp
 
     mv /etc/ssh/sshd_config.tmp /etc/ssh/sshd_config
 }
@@ -192,15 +223,24 @@ EOF
 
 }
 
+msf_init()
+{
+    if [ "${THIS_SYSTEM}" == "kali" ]; then
+        msfdb init
+        msfconsole -x "db_rebuild_cache"
+    fi
+}
+
 
 main()
 {
+    detect_system
     unsupervised_initial_tasks
     virtualbox_packages
     install_selected_packages
 
     #Configuration
-    new_passwd
+    new_root_passwd
     secure_ssh
     gnome_config
     bash_profile
