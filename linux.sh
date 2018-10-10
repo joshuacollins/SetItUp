@@ -15,7 +15,7 @@ tcl_packages="expect"
 
 novelty_packages="sysvbanner cowsay"
 
-vbox_packages="dkms virtualbox-guest-x11 virtualbox-guest-dkms virtualbox-guest-utils"
+vbox_packages="dkms virtualbox-guest-x11 virtualbox-guest-dkms virtualbox-guest-utils linux-headers-$(uname -r)"
 
 #What type of system is it?
 # kali | debian
@@ -143,8 +143,12 @@ virtualbox_packages()
     ask_question "Install virtualbox extensions?"
 
     if [ "$?" -eq 0 ]; then
-        # Full integration packages for kali/ubuntu
+        if [ "${THIS_SYSTEM}" == "debian" ]; then
+            echo deb http://ftp.debian.org/debian stretch-backports main contrib > /etc/apt/sources.list.d/stretch-backports.list
+            apt update
+        fi
 
+        # Full integration packages for kali/ubuntu
         sudo apt-get -y install ${vbox_packages}
 
         virtualbox_config
