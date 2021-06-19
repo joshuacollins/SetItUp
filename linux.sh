@@ -287,7 +287,7 @@ main()
     ask_question "Reboot now?"
     if [ "$?" -eq 0 ]; then
         echo "Hoping it all went OK..."
-        reboot
+        sudo reboot 
     fi
 }
 
