@@ -147,8 +147,8 @@ virtualbox_config()
     sudo VBoxControl sharedfolder -automount
 
     # Like, seriously!?! You thought I wanted my clock to stay stuck on installation day?
-    VBoxService --enable-timesync
-    VBoxService --enable-automount
+    sudo VBoxService --enable-timesync
+    sudo VBoxService --enable-automount
 
 }
 
@@ -209,9 +209,9 @@ secure_ssh()
 
     if [ -e "/etc/ssh/sshd_config" ]; then
         # Clear offending lines, append at the end
-        sudo sed -e 's/^PermitRootLogin.*//g' \
+        sudo sh -c "sed -e 's/^PermitRootLogin.*//g' \
             -e 's/^PasswordAuthentication.*//g' \
-            < /etc/ssh/sshd_config > /etc/ssh/sshd_config.tmp
+            < /etc/ssh/sshd_config > /etc/ssh/sshd_config.tmp"
 
         # Append the settings we want to set
         sudo echo -e "# Added by $0\nPermitRootLogin no\nPasswordAuthentication no\n" >> /etc/ssh/sshd_config.tmp
@@ -265,7 +265,7 @@ msf_init()
 clean_up()
 {
     echo "Removing packages no longer required"
-    apt autoremove
+    sudo apt autoremove
 }
 
 
